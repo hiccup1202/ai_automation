@@ -1,0 +1,129 @@
+services:
+  # ============================================
+  # MySQL Database
+  # ============================================
+  mysql:
+    image: mysql:8.0
+    container_name: inventory_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: inventory_db
+      MYSQL_USER: inventory_user
+      MYSQL_PASSWORD: inventory_password
+    ports:
+      - "9006:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - inventory_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Lag-Llama LLM Service (Python FastAPI)
+  # ============================================
+  llm-service:
+    build:
+      context: ./llm-service
+      dockerfile: Dockerfile
+    container_name: inventory_llm
+    restart: unless-stopped
+    environment:
+      - LAG_LLAMA_SERVICE_URL=http://llm-service:8000
+      - HF_HOME=/root/.cache/huggingface
+    ports:
+      - "9002:8000"
+    volumes:
+      - llm_cache:/root/.cache/huggingface  # Cache downloaded models
+    networks:
+      - inventory_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================
+  # Backend API (NestJS)
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: inventory_backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mysql://inventory_user:inventory_password@mysql:3306/inventory_db
+      - SHADOW_DATABASE_URL=mysql://root:rootpassword@mysql:3306/inventory_db_shadow
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_USER=inventory_user
+      - DATABASE_PASSWORD=inventory_password
+      - DATABASE_NAME=inventory_db
+      - LAG_LLAMA_SERVICE_URL=http://llm-service:8000
+      - PORT=3000
+    ports:
+      - "9001:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      llm-service:
+        condition: service_healthy
+    networks:
+      - inventory_network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/products', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ============================================
+  # Frontend (Next.js)
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: inventory_frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:9001
+      - PORT=3001
+    ports:
+      - "9000:3001"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - inventory_network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  inventory_network:
+    driver: bridge
+    name: inventory_network
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  mysql_data:
+    name: inventory_mysql_data
+  llm_cache:
+    name: inventory_llm_cache

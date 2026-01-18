@@ -1,0 +1,157 @@
+// Prisma Schema for AI-Based Smart Inventory Automation System
+// This schema defines the database structure using Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+// ============================================
+// PRODUCTS TABLE
+// ============================================
+// Stores product information including SKU, pricing, and stock thresholds
+model Product {
+  id               String      @id @default(uuid())
+  sku              String      @unique
+  name             String
+  description      String?     @db.Text
+  category         String?
+  price            Decimal     @db.Decimal(10, 2)
+  cost             Decimal     @default(0) @db.Decimal(10, 2)
+  minStockLevel    Int         @default(0)
+  maxStockLevel    Int         @default(100)
+  reorderPoint     Int         @default(20)
+  reorderQuantity  Int         @default(50)
+  isActive         Boolean     @default(true)
+  
+  // NEW: Advanced ML Model Parameters
+  modelWeightA       Decimal?  @default(1.0) @db.Decimal(10, 6)   // Linear trend coefficient
+  modelWeightB       Decimal?  @default(0.0) @db.Decimal(10, 6)   // Baseline/intercept
+  modelConfidence    Decimal?  @default(50.0) @db.Decimal(5, 2)   // Overall confidence 0-100
+  modelTrainingCount Int?      @default(0)                         // Number of training samples
+  modelLastUpdated   DateTime?                                     // Last training timestamp
+  
+  // Advanced parameters for complex patterns
+  modelSeasonality   Json?                                         // Weekly/monthly patterns
+  modelTrendStrength Decimal?  @default(0.0) @db.Decimal(5, 2)    // Trend strength 0-100
+  modelVolatility    Decimal?  @default(0.0) @db.Decimal(10, 6)   // Demand volatility
+  modelEwmaAlpha     Decimal?  @default(0.3) @db.Decimal(5, 3)    // EWMA smoothing factor
+  
+  // Relationships
+  inventoryRecords Inventory[]
+  predictions      Prediction[]
+  alerts           Alert[]
+  
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@map("products")
+  @@index([sku])
+  @@index([category])
+  @@index([isActive])
+}
+
+// ============================================
+// INVENTORY TABLE
+// ============================================
+// Tracks all inventory transactions (purchases, sales, adjustments, returns)
+model Inventory {
+  id              String          @id @default(uuid())
+  productId       String
+  transactionType TransactionType
+  quantity        Int
+  currentStock    Int             @default(0)
+  notes           String?         @db.Text
+  
+  // Relationships
+  product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime        @default(now())
+
+  @@map("inventory")
+  @@index([productId])
+  @@index([transactionType])
+  @@index([createdAt])
+}
+
+// Transaction types enum
+enum TransactionType {
+  PURCHASE    // Stock coming in from supplier
+  SALE        // Stock going out (customer purchase)
+  ADJUSTMENT  // Manual stock correction
+  RETURN      // Customer return (stock coming back)
+}
+
+// ============================================
+// PREDICTIONS TABLE
+// ============================================
+// Stores AI-generated demand predictions for products
+model Prediction {
+  id              String   @id @default(uuid())
+  productId       String
+  predictedDemand Int
+  confidence      Float    // 0-100 confidence score
+  predictionDate  DateTime @db.Date
+  daysAhead       Int      @default(7)
+  metadata        Json?    // Additional prediction data
+  
+  // Relationships
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+
+  @@map("predictions")
+  @@index([productId])
+  @@index([predictionDate])
+  @@index([createdAt])
+}
+
+// ============================================
+// ALERTS TABLE
+// ============================================
+// Manages alerts for inventory issues (low stock, overstocking, etc.)
+model Alert {
+  id              String      @id @default(uuid())
+  productId       String
+  alertType       AlertType
+  status          AlertStatus @default(ACTIVE)
+  message         String      @db.Text
+  priority        Int         @default(5) // 1-10, where 10 is highest priority
+  metadata        Json?       // Additional alert data
+  
+  // Relationships
+  product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("alerts")
+  @@index([productId])
+  @@index([alertType])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+// Alert types enum
+enum AlertType {
+  LOW_STOCK           // Stock is below reorder point
+  CRITICAL_STOCK      // Stock is at or below minimum level
+  OVERSTOCK           // Stock exceeds maximum level
+  REORDER_NEEDED      // Time to reorder based on thresholds
+  PREDICTED_SHORTAGE  // AI predicts future stockout
+}
+
+// Alert status enum
+enum AlertStatus {
+  ACTIVE        // Alert is active and needs attention
+  ACKNOWLEDGED  // Alert has been seen by user
+  RESOLVED      // Issue has been fixed
+  DISMISSED     // Alert was dismissed/ignored
+}
+

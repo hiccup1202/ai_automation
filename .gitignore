@@ -1,0 +1,264 @@
+# ============================================================================
+# NODE.JS / JAVASCRIPT / TYPESCRIPT
+# ============================================================================
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Testing
+coverage/
+.nyc_output/
+*.log
+
+# Production builds
+build/
+dist/
+.next/
+out/
+
+# Next.js
+.next/
+.cache/
+public/static/
+.vercel/
+
+# ============================================================================
+# PYTHON
+# ============================================================================
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+*.virtualenv
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+*.egg
+*.egg-info/
+dist-py/
+build-py/
+wheels/
+pip-wheel-metadata/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# pyenv
+.python-version
+
+# Pytest
+.pytest_cache/
+.tox/
+
+# ============================================================================
+# LLM / AI MODELS
+# ============================================================================
+
+# Hugging Face cache (Lag-Llama models)
+.cache/
+llm-service/.cache/
+llm-service/models/
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.pb
+
+# Model cache directories
+.huggingface/
+transformers_cache/
+torch_cache/
+
+# ============================================================================
+# DOCKER
+# ============================================================================
+
+# Docker volumes
+mysql_data/
+postgres_data/
+mongo_data/
+redis_data/
+
+# Docker override files
+docker-compose.override.yml
+docker-compose.local.yml
+
+# ============================================================================
+# DATABASES
+# ============================================================================
+
+# Database files
+*.sql
+!init.sql
+!schema.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# Prisma
+backend/prisma/migrations/*_migration/
+backend/prisma/dev.db
+backend/prisma/.env
+
+# TypeORM
+typeorm-*.json
+
+# ============================================================================
+# ENVIRONMENT & SECRETS
+# ============================================================================
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Secrets
+*.pem
+*.key
+*.cert
+*.crt
+secrets/
+.secrets/
+
+# ============================================================================
+# IDE / EDITORS
+# ============================================================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim
+*.swp
+*.swo
+*~
+.vim/
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ============================================================================
+# OS
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*/
+
+# ============================================================================
+# LOGS & TEMPORARY FILES
+# ============================================================================
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+.temp/
+
+# ============================================================================
+# BUILD ARTIFACTS
+# ============================================================================
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# ============================================================================
+# PROJECT-SPECIFIC
+# ============================================================================
+
+# Deployment
+.vercel
+
+# Documentation (auto-generated)
+docs/api/
+docs/coverage/
+
+# Screenshots/assets (large files)
+screenshots/
+assets/raw/
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+
+
+
