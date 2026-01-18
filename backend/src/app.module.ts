@@ -21,7 +21,7 @@ import { LlmModule } from './llm/llm.module';
       password: process.env.DATABASE_PASSWORD || 'inventory_password',
       database: process.env.DATABASE_NAME || 'inventory_db',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // Set to false in production
+      synchronize: false, // Using Prisma for schema management
       logging: process.env.NODE_ENV === 'development',
     }),
     ProductsModule,
