@@ -12,3 +12,4 @@ ALTER TABLE `products` ADD COLUMN `modelLastUpdated` DATETIME NULL COMMENT 'Last
 
 
 
+

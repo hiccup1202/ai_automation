@@ -91,3 +91,4 @@ ALTER TABLE `alerts` ADD CONSTRAINT `alerts_productId_fkey` FOREIGN KEY (`produc
 
 
 
+

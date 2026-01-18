@@ -45,4 +45,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 
 # Start command with delay to ensure MySQL is fully ready
 # Auto-seed database on startup (perfect for POC/demo)
-CMD ["sh", "-c", "sleep 5 && npx prisma migrate deploy && npm run prisma:seed && npm run start:prod"]
+CMD ["sh", "-c", "sleep 5 && npx prisma migrate deploy && npx prisma generate && npm run prisma:seed && npm run start:prod"]

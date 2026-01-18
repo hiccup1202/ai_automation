@@ -11,3 +11,4 @@ ALTER TABLE `products` ADD COLUMN `modelEwmaAlpha` DECIMAL(5, 3) DEFAULT 0.3 NUL
 
 
 
+
