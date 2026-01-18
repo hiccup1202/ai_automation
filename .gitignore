@@ -114,12 +114,14 @@ docker-compose.local.yml
 *.sql
 !init.sql
 !schema.sql
+!**/migrations/**/migration.sql  # Keep Prisma migration files!
 *.db
 *.sqlite
 *.sqlite3
 
 # Prisma
-backend/prisma/migrations/*_migration/
+# Commit all migrations! They're required for prisma migrate deploy in Docker
+# backend/prisma/migrations/*_draft/  # Uncomment to exclude draft migrations if needed
 backend/prisma/dev.db
 backend/prisma/.env
 
@@ -163,7 +165,7 @@ secrets/
 *.swo
 *~
 .vim/
-lock
+
 # Emacs
 *~
 \#*\#
