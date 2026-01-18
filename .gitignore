@@ -6,7 +6,9 @@
 node_modules/
 .pnp
 .pnp.js
-package-lock.json
+
+# Only ignore alternative package manager lock files if you're using npm
+# package-lock.json should be committed for npm projects
 yarn.lock
 pnpm-lock.yaml
 
@@ -161,7 +163,7 @@ secrets/
 *.swo
 *~
 .vim/
-
+lock
 # Emacs
 *~
 \#*\#
