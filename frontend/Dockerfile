@@ -13,7 +13,13 @@ RUN npm ci
 # Copy application code
 COPY . .
 
-# Build the application
+# Accept build arguments
+ARG NEXT_PUBLIC_API_URL=http://localhost:9001
+
+# Set as environment variable for build
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+# Build the application (NEXT_PUBLIC_* vars are baked in here)
 RUN npm run build
 
 # Production image
