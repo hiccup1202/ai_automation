@@ -63,6 +63,11 @@ export const apiClient = {
     return response.data
   },
   
+  trainAllModels: async () => {
+    const response = await api.post('/predictions/train-all-models')
+    return response.data
+  },
+  
   getPredictions: async (productId?: string) => {
     const url = productId ? `/predictions?productId=${productId}` : '/predictions'
     const response = await api.get(url)

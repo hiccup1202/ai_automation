@@ -5,6 +5,7 @@ import { Prediction } from './entities/prediction.entity';
 import { Product } from '../products/entities/product.entity';
 import { Inventory, TransactionType } from '../inventory/entities/inventory.entity';
 import { AdvancedMLService } from '../inventory/advanced-ml.service';
+import { LagLlamaService } from '../llm/lag-llama.service';
 const regression = require('regression');
 
 @Injectable()
@@ -17,6 +18,7 @@ export class PredictionsService {
     @InjectRepository(Inventory)
     private inventoryRepository: Repository<Inventory>,
     private advancedMLService: AdvancedMLService,
+    private lagLlamaService: LagLlamaService,
   ) {}
 
   async generatePredictionsForAllProducts(): Promise<Prediction[]> {
@@ -55,10 +57,125 @@ export class PredictionsService {
   }
 
   /**
-   * 🦙 Predict using Lag-Llama LLM model
-   * Uses: Transformer-based time series forecasting
+   * 🦙 Predict using Lag-Llama LLM model (REAL LLM SERVICE)
+   * Uses: Transformer-based time series forecasting from Python service
    */
   private async predictWithLagLlamaModel(product: Product, daysAhead: number): Promise<Prediction> {
+    // First, try to use the REAL LLM service
+    const llmPrediction = await this.predictWithRealLLM(product, daysAhead);
+    
+    if (llmPrediction) {
+      console.log(`✅ Using REAL LLM service for prediction`);
+      return llmPrediction;
+    }
+    
+    // Fallback to stored linear approximation if LLM service unavailable
+    console.log(`⚠️  LLM service unavailable, using stored linear approximation`);
+    return this.predictWithStoredLinearization(product, daysAhead);
+  }
+
+  /**
+   * 🦙 NEW: Predict using REAL Lag-Llama LLM service
+   */
+  private async predictWithRealLLM(product: Product, daysAhead: number): Promise<Prediction | null> {
+    try {
+      // Check if service is available
+      const serviceStatus = this.lagLlamaService.getServiceStatus();
+      if (!serviceStatus.available) {
+        console.log(`❌ LLM service not available at ${serviceStatus.url}`);
+        return null;
+      }
+
+      // Fetch historical sales data
+      const salesData = await this.inventoryRepository.find({
+        where: {
+          productId: product.id,
+          transactionType: TransactionType.SALE,
+        },
+        order: { createdAt: 'ASC' },
+        take: 90, // Last 90 days
+      });
+
+      if (salesData.length < 7) {
+        console.log(`⚠️  Not enough historical data (${salesData.length} points)`);
+        return null;
+      }
+
+      // Prepare data for LLM
+      const lagLlamaData = {
+        dates: salesData.map(d => d.createdAt.toISOString()),
+        quantities: salesData.map(d => Math.abs(d.quantity)), // Sales are negative
+        product_id: product.id,
+        days_ahead: daysAhead,
+      };
+
+      console.log(`🦙 Calling REAL Lag-Llama service for ${product.sku}...`);
+      const llmResult = await this.lagLlamaService.predict(lagLlamaData);
+
+      if (!llmResult) {
+        return null;
+      }
+
+      // Extract first day prediction (or sum if needed)
+      const predictedDemand = Math.max(0, Math.round(llmResult.predictions[0]));
+      const futureDate = new Date(llmResult.prediction_dates[0]);
+
+      // Calculate confidence from prediction intervals
+      const lowerBound = Math.round(llmResult.confidence_intervals.lower[0]);
+      const upperBound = Math.round(llmResult.confidence_intervals.upper[0]);
+      const confidence = Math.round(
+        100 - ((upperBound - lowerBound) / predictedDemand * 50)
+      );
+
+      const prediction = this.predictionsRepository.create({
+        productId: product.id,
+        predictedDemand,
+        confidence: Math.min(95, Math.max(70, confidence)),
+        predictionDate: futureDate,
+        daysAhead,
+        metadata: {
+          method: '🦙 REAL Lag-Llama LLM Service',
+          algorithm: 'Transformer-based Time Series Forecasting',
+          source: 'Python FastAPI LLM Service',
+          
+          // LLM predictions
+          predictions: llmResult.predictions,
+          predictionDates: llmResult.prediction_dates,
+          
+          // Confidence intervals
+          lowerBound: lowerBound,
+          upperBound: upperBound,
+          confidenceRange: llmResult.metadata.confidence_range,
+          
+          // Trend analysis from LLM
+          trend: llmResult.metadata.trend,
+          historicalMean: llmResult.metadata.historical_mean,
+          predictedMean: llmResult.metadata.predicted_mean,
+          hasSeasonality: llmResult.metadata.has_seasonality,
+          
+          // Model info
+          forecastHorizon: llmResult.metadata.forecast_horizon,
+          contextLength: llmResult.metadata.context_length,
+          modelType: llmResult.model_type,
+          
+          // Display info
+          trendIcon: llmResult.metadata.trend === 'increasing' ? '📈' : 
+                     llmResult.metadata.trend === 'decreasing' ? '📉' : '➡️',
+        },
+      });
+
+      return await this.predictionsRepository.save(prediction);
+
+    } catch (error) {
+      console.error(`❌ Error calling real LLM service: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Fallback: Use stored linear approximation from previous training
+   */
+  private async predictWithStoredLinearization(product: Product, daysAhead: number): Promise<Prediction> {
     // Parse seasonality JSON if it's a string
     let seasonality = product.modelSeasonality;
     if (typeof seasonality === 'string') {
@@ -103,8 +220,9 @@ export class PredictionsService {
       predictionDate: futureDate,
       daysAhead,
       metadata: {
-        method: '🦙 Lag-Llama LLM',
-        algorithm: 'Transformer-based Time Series Forecasting',
+        method: '🦙 Stored Linear Approximation (Fallback)',
+        algorithm: 'Linear model from previous LLM training',
+        note: 'LLM service unavailable - using cached model',
         
         // Model parameters
         trendEquation: `y = ${modelParams.weightA.toFixed(4)}x + ${modelParams.weightB.toFixed(2)}`,
@@ -198,10 +316,10 @@ export class PredictionsService {
     const latestPredictions = [];
 
     for (const product of products) {
+      // Get the most recent prediction based on createdAt, regardless of predictionDate
       const prediction = await this.predictionsRepository.findOne({
         where: {
           productId: product.id,
-          predictionDate: MoreThan(new Date()),
         },
         order: { createdAt: 'DESC' },
       });

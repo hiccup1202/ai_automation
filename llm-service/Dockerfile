@@ -1,4 +1,4 @@
-# Dockerfile for Lag-Llama LLM Service
+# Dockerfile for Chronos Time Series Service (Amazon's Chronos Model)
 FROM python:3.12-slim
 
 # Set working directory
@@ -12,27 +12,39 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for layer caching)
-COPY requirements_simple.txt requirements.txt
+COPY requirements.txt .
 
-# Install Python dependencies (lightweight - no heavy ML models!)
+# Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Copy download script
+COPY download_model.py .
+
+# 🔥 PRE-DOWNLOAD CHRONOS MODEL DURING BUILD
+# Amazon Chronos: Fast, reliable, production-ready
+RUN echo "===========================================" && \
+    echo "⏰ DOWNLOADING AMAZON CHRONOS MODEL..." && \
+    echo "This will take 2-10 minutes" && \
+    echo "Size: ~200-500 MB" && \
+    echo "===========================================" && \
+    python download_model.py || echo "⚠️  Download failed, will retry at runtime"
+
 # Copy application code
 COPY app.py .
-COPY app_simple.py .
 
 # Expose port
 EXPOSE 8000
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV LAG_LLAMA_SERVICE_URL=http://localhost:8000
+ENV HF_HOME=/root/.cache/huggingface
+ENV CHRONOS_MODEL_SIZE=small
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start the service (using simplified statistical model for POC)
-CMD ["python", "app_simple.py"]
+# Start the Chronos service
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 

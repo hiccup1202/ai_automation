@@ -1,29 +1,26 @@
-# Lag-Llama LLM Service Dependencies
+# Chronos Time Series Model Requirements
 
 # Core Framework
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.5.0
 
-# PyTorch (CPU version for offline use)
-torch>=2.2.0
-torchvision>=0.17.0
+# PyTorch (CPU version - smaller download)
+torch>=2.0.0
+--extra-index-url https://download.pytorch.org/whl/cpu
 
-# Transformers & Time Series
+# Chronos Model
+git+https://github.com/amazon-science/chronos-forecasting.git
+
+# Transformers & HuggingFace
 transformers>=4.36.0
-gluonts>=0.14.0
+accelerate>=0.26.0
 
 # Data Processing
 numpy>=1.24.0
 pandas>=2.1.0
-scipy>=1.11.0
 
 # API & Utilities
 requests>=2.31.0
 python-multipart>=0.0.6
-
-# Optional: Accelerated inference
-accelerate>=0.26.0
-
-
 

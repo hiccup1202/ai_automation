@@ -1,6 +1,6 @@
 """
-Pre-download Lag-Llama model during Docker build
-This runs ONCE when container is built, not on every API call
+Pre-download Amazon Chronos model during Docker build
+Chronos is much smaller and easier than Lag-Llama!
 """
 
 import os
@@ -10,39 +10,48 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def download_lag_llama_model():
-    """Download Lag-Llama model to local cache"""
+def download_chronos_model():
+    """Download Chronos model to local cache"""
     try:
         logger.info("=" * 70)
-        logger.info("🚀 DOWNLOADING LAG-LLAMA MODEL...")
+        logger.info("🚀 DOWNLOADING AMAZON CHRONOS MODEL...")
         logger.info("=" * 70)
         logger.info("")
-        logger.info("⚠️  This will download 2-5 GB from Hugging Face")
-        logger.info("⏱️  Expected time: 30 minutes - 4 hours")
+        logger.info("📦 Model: amazon/chronos-t5-small")
+        logger.info("💾 Size: ~200-500 MB (much smaller than Lag-Llama!)")
+        logger.info("⏱️  Expected time: 2-10 minutes")
         logger.info("💾 Saving to: /root/.cache/huggingface/")
         logger.info("")
         
-        from transformers import AutoModelForCausalLM
+        from chronos import ChronosPipeline
+        import torch
         
-        model_path = os.getenv("LAG_LLAMA_MODEL_PATH", "time-series-foundation-models/lag-llama")
+        # Download Chronos Small (best balance)
+        model_size = os.getenv("CHRONOS_MODEL_SIZE", "small")
+        model_path = f"amazon/chronos-t5-{model_size}"
         
         logger.info(f"📡 Downloading from: {model_path}")
         logger.info("⏳ Please wait...")
         
         # Download and cache the model
-        model = AutoModelForCausalLM.from_pretrained(
+        device = "cpu"  # Use CPU for download
+        pipeline = ChronosPipeline.from_pretrained(
             model_path,
-            local_files_only=False,  # Download from internet
-            trust_remote_code=True,
-            cache_dir="/root/.cache/huggingface"
+            device_map=device,
+            torch_dtype=torch.float32,
         )
         
         logger.info("")
         logger.info("=" * 70)
-        logger.info("✅ MODEL DOWNLOADED SUCCESSFULLY!")
+        logger.info("✅ CHRONOS MODEL DOWNLOADED SUCCESSFULLY!")
         logger.info("=" * 70)
         logger.info(f"📂 Model cached in: /root/.cache/huggingface/")
         logger.info("🚀 Future API calls will use cached model (fast!)")
+        logger.info("")
+        logger.info("Model info:")
+        logger.info(f"  - Size: {model_size}")
+        logger.info(f"  - Device: {device}")
+        logger.info(f"  - Type: Amazon Chronos Transformer")
         logger.info("")
         
         return True
@@ -56,9 +65,8 @@ def download_lag_llama_model():
         logger.error("")
         logger.error("Possible reasons:")
         logger.error("  - No internet connection")
-        logger.error("  - Hugging Face is down")
+        logger.error("  - GitHub or Hugging Face is down")
         logger.error("  - Insufficient disk space")
-        logger.error("  - Model path incorrect")
         logger.error("")
         
         # Don't fail the build, just warn
@@ -67,9 +75,6 @@ def download_lag_llama_model():
         return False
 
 if __name__ == "__main__":
-    success = download_lag_llama_model()
+    success = download_chronos_model()
     sys.exit(0 if success else 0)  # Always exit 0 to not fail Docker build
-
-
-
 
